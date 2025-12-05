@@ -10,8 +10,6 @@ services:
         volumes:
             - ./app:/app
         environment:
-            - APP_ENV=dev
-            - APP_DEBUG=1
             - DATABASE_URL=postgresql://app:!ChangeMe!@database:5432/app?serverVersion=17.6&charset=utf8
         networks:
             - internal

@@ -1,6 +1,5 @@
 #!/usr/bin/env just --justfile
 
-
 [group: 'Docker']
 up:
   docker compose up -d

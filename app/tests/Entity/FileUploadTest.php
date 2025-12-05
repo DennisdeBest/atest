@@ -8,6 +8,11 @@ use Symfony\Component\HttpFoundation\File\UploadedFile;
 class FileUploadTest extends ApiTestCase
 {
     protected static ?bool $alwaysBootKernel = true;
+
+    public function setUp(): void {
+//        $_ENV['APP_ENV'] = 'test';
+    }
+
     private function setupTestfile(string $filename): string
     {
         $path = __DIR__ . '/../fixtures/' . $filename;
@@ -21,6 +26,8 @@ class FileUploadTest extends ApiTestCase
     public function testValidCsvUploadIsAccepted(): void
     {
         $client = static::createClient();
+
+        self::assertSame('test', $_SERVER['APP_ENV'] ?? null);
 
         $tmpPath = $this->setupTestfile('valid.csv');
 

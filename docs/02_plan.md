@@ -14,5 +14,9 @@
 
 ## Errors
 
-- File size
+- File size: not initially required
 - File type
+
+## Tests
+
+- Expected errors
