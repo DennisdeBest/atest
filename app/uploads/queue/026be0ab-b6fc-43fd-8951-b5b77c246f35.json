@@ -1,0 +1,1225 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "model": "llama3.1:8b-instruct-q6_K",
+        "options": {
+          "temperature": 0.1,
+          "topP": 1,
+          "numCtx": 8192,
+          "numPredict": 150,
+          "format": "json"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        1232,
+        240
+      ],
+      "id": "837640eb-7cfa-48ff-8467-a309cf502ecd",
+      "name": "Ollama Chat Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "7taoFRd2NvlkMfae",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -384,
+        -464
+      ],
+      "id": "59c682fd-c335-459a-9b01-ad2ce0a4aefa",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "limit": "={{ $('Values').item.json.email_limit }}",
+        "simple": false,
+        "filters": {
+          "q": "-label:AI_PROCESSED"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        112,
+        144
+      ],
+      "id": "e9042784-a37f-455c-a85f-27891d193a66",
+      "name": "Get many messages",
+      "webhookId": "9bd8bf8d-fc06-46e3-9589-d4f066ba1daa",
+      "alwaysOutputData": false,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "i1ICRHhLZ1MjQ6Fk",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5163ee0a-9ba9-4ca4-8821-536efb314a13",
+              "name": "id",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "a2f10908-75ba-480b-b07a-110f63b46f74",
+              "name": "labelIds",
+              "value": "={{ $json.labelIds }}",
+              "type": "array"
+            },
+            {
+              "id": "4c27af18-0e57-44a2-83a8-f109a18caa5a",
+              "name": "headers.from",
+              "value": "={{ $json.headers.from }}",
+              "type": "string"
+            },
+            {
+              "id": "d65b78c8-6c93-43bd-ab9f-41828cf932d8",
+              "name": "headers.subject",
+              "value": "={{ $json.headers.subject }}",
+              "type": "string"
+            },
+            {
+              "id": "89dc0d92-e192-402e-9d4e-8c1483f83d0f",
+              "name": "text",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        304,
+        144
+      ],
+      "id": "3e8cce9b-58da-4a78-ac2e-0df901eebf2d",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Email to label:\n\nid: {{ $json.id }}\nassigned_ai_labels: {{ JSON.stringify($json.existingAiOnMessage) }}\navailable_ai_labels: {{ JSON.stringify($item(0).$node[\"ExistingAiLabels\"].json.data.map(l => l.name)) }}\n\nfrom: {{ $json.from }}\nsubject: {{ $json.subject }}\ntext: |\n{{ $json.text_clean }}\n",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You process exactly ONE email and output ONE JSON object, never an array.\n\nOUTPUT (exactly):\n{\"id\":\"<string>\",\"add\":[\"AI_<LABEL1>\",\"AI_<LABEL2>\", ...]}\n\nSTRICT RULES\n- Output must be valid JSON only — no explanations or extra text.\n- Include 1–3 labels in \"add\", all uppercase and starting with \"AI_\".\n- Never include any label already present in assigned_ai_labels.\n- If uncertain, include AI_REVIEW or AI_LOW_CONFIDENCE.\n- Be specific — avoid vague or generic labels like AI_SPAM unless clearly junk.\n\nGOAL\nAssign meaningful AI_* labels that describe the email’s topic, intent, or purpose.\nPrefer reusing existing system labels; if none fit, create a new descriptive one; Prefer using the existing one if the difference is small.\n\nINPUT FIELDS\nid: \"<string>\"\nassigned_ai_labels: [\"AI_<LABEL>\", ...]     // AI_* labels already applied to this message\navailable_ai_labels: [\"AI_<LABEL>\", ...]    // all known AI_* labels that exist in the system\nfrom: \"<string>\"\nsubject: \"<string>\"\ntext: \"<string>\"\n\nDECISION PROCESS\n1. Identify the main topic or intent of the email from subject/text.\n2. If a suitable label exists in available_ai_labels, reuse it.\n3. If not, create a clear and specific new one (e.g. AI_LOGIN_CODE, AI_PASSWORD_RESET, AI_ORDER_UPDATE, AI_FINANCE_REPORT, AI_DATABASE_ALERT, AI_PROMOTION, AI_SUPPORT_TICKET).\n4. Avoid broad terms unless no better fit exists.\n5. If confidence is low or uncertain, append AI_REVIEW.\n\nQUALITY RULES\n- Uppercase all labels and prefix with AI_ if missing.\n- Deduplicate and exclude assigned_ai_labels.\n- Keep at most 3 labels total.\n\nRETURN ONLY THE JSON OBJECT.\n\nEXAMPLES\n\n**Marketing email**\nInput:\n{\"id\":\"1\",\"assigned_ai_labels\":[\"AI_PROCESSED\"],\"available_ai_labels\":[\"AI_MARKETING_EMAIL\",\"AI_DISCOUNT_OFFER\"],\"from\":\"Shop <promo@shop.com>\",\"subject\":\"-40% this weekend\",\"text\":\"Big Black Friday sale!\"}\nOutput:\n{\"id\":\"1\",\"add\":[\"AI_MARKETING_EMAIL\",\"AI_DISCOUNT_OFFER\"]}\n\n**Security alert**\nInput:\n{\"id\":\"2\",\"assigned_ai_labels\":[\"AI_SECURITY\"],\"available_ai_labels\":[\"AI_SECURITY\",\"AI_LOGIN_ALERT\"],\"from\":\"GitHub\",\"subject\":\"New sign-in detected\",\"text\":\"...from Paris...\"}\nOutput:\n{\"id\":\"2\",\"add\":[\"AI_LOGIN_ALERT\"]}\n\n**Unclear or ambiguous**\nInput:\n{\"id\":\"3\",\"assigned_ai_labels\":[],\"available_ai_labels\":[\"AI_PROJECT_ALERT\"],\"from\":\"unknown\",\"subject\":\"hi\",\"text\":\"hello\"}\nOutput:\n{\"id\":\"3\",\"add\":[\"AI_REVIEW\"]}\n"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        1200,
+        -64
+      ],
+      "id": "fe0420c4-956a-490b-a791-7613d2f59b54",
+      "name": "Basic LLM Chain",
+      "executeOnce": false,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "resource": "label",
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        112,
+        -16
+      ],
+      "id": "81df3da3-c151-47b6-bf2b-e3e45b2b301d",
+      "name": "Get many labels",
+      "webhookId": "174838f3-d1eb-462e-a349-e977324ce563",
+      "executeOnce": true,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "i1ICRHhLZ1MjQ6Fk",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "3ec67e89-c05d-4164-b521-d166dfaaabd0",
+              "leftValue": "={{ $json.name }}",
+              "rightValue": "AI_",
+              "operator": {
+                "type": "string",
+                "operation": "startsWith"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        304,
+        -16
+      ],
+      "id": "1eeb5a26-5cd9-46ff-9aa3-7d47a3229bcd",
+      "name": "Filter",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "include": "specifiedFields",
+        "fieldsToInclude": "id, name",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        496,
+        -16
+      ],
+      "id": "9b2eca8f-3250-442c-b33c-0cf38e716db2",
+      "name": "ExistingAiLabels",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "mode": "chooseBranch",
+        "useDataOfInput": 2
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        688,
+        128
+      ],
+      "id": "308a762d-dee6-4e1c-b6e7-9f2ea7df97d0",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "jsCode": "// All labeled emails\nconst items = $input.all();\n\n// Step 1: gather every label from \"add\"\nconst all = new Set();\nfor (const item of items) {\n  for (const label of (item.json.add || [])) {\n    all.add(label);\n  }\n}\n\n// Step 2: remove AI_PROCESSED\nall.delete(\"AI_PROCESSED\");\n\n// Step 3: get existing labels from the ExistingAiLabels node\nconst existing = new Set(\n  ($(\"ExistingAiLabels\").first().json.data.map(l => l.name) || [])\n    .map(l => l.toUpperCase())\n);\n\n\n// Step 4: filter out existing ones\nconst newLabels = Array.from(all)\n  .map(l => l.toUpperCase())\n  .filter(l => !existing.has(l));\n\n// Output\nreturn newLabels.map(label => ({\n  json: { name: label }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1248,
+        640
+      ],
+      "id": "8232393d-0ec1-46bf-8a96-4302a0c898f9",
+      "name": "NewLabels",
+      "alwaysOutputData": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "model": "llama3.1:8b-instruct-q6_K",
+        "options": {
+          "temperature": 0.1,
+          "topP": 0.9,
+          "numPredict": 150,
+          "format": "json"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        1776,
+        704
+      ],
+      "id": "afe7b604-9750-491b-855e-505803fafcd3",
+      "name": "Ollama Chat Model2",
+      "credentials": {
+        "ollamaApi": {
+          "id": "7taoFRd2NvlkMfae",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Label to create\n\nname: {{ $json.name }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "Goal\n\nSuggest a Gmail label configuration (with colors) for the given label name.\n\nHard rules\n\nOnly use colors from ALLOWED_COLORS. Copy them exactly (lowercase hex, including #).\n\nIf you’re unsure which hue fits, use the fallback: background #c2c2c2, text #000000.\n\nBefore output, validate that both colors are in ALLOWED_COLORS. If either is not, replace with the fallback pair above.\n\nOutput only the JSON object—no notes, no extra fields.\n\nMapping hints (loose semantics → hue family)\n\n\"SECURITY\" | \"ALERT\" | \"PHISHING\" | \"ERROR\" | \"URGENT\" → red/orange\n\n\"SUCCESS\" | \"DEPLOY\" | \"WORK\" | \"DONE\" → green\n\n\"INFO\" | \"NOTIFICATION\" | \"DOCS\" | \"NEWS\" → blue\n\n\"DEVOPS\" | \"TECH\" | \"CODE\" | \"BUILD\" | \"CI\" | \"CD\" | \"OPS\" → purple/dark\n\nOtherwise → neutral gray or blue (fallback if uncertain)\n\nContrast rule\n\nIf background is light (pastels, very light grays): text #000000.\n\nIf background is dark (black, dark grays, saturated darks): text #ffffff.\n\nBoth must still be from ALLOWED_COLORS.\n\nSelection steps (do these in order)\n\nNormalize the name (uppercase) and pick a hue family using Mapping hints.\n\nWithin that family, choose a background from ALLOWED_COLORS that best matches the hue:\n\nReds/Oranges: #fb4c2f, #ff7537, #ffad46, #ffad47, #e66550, #e07798, #f691b3, #cc3a21, #ac2b16, #822111, #8a1c0a, #7a2e0b, #662e37\n\nGreens: #16a766, #43d692, #44b984, #68dfa9, #149e60, #3dc789, #0b804b, #2a9c68, #076239, #1a764d, #0b4f30, #04502e, #42d692, #16a765\n\nBlues: #4a86e8, #6d9eeb, #3c78d8, #285bac, #1c4587, #0d3472, #4986e7, #a4c2f4, #b6cff5, #c9daf8, #a2dcc1, #2da2bb\n\nPurples/Darks: #a479e2, #8e63ce, #653e9b, #41236d, #3d188e, #b99aff, #b694e8, #d0bcf1, #e3d7ff, #464646, #434343, #666666, #000000\n\nNeutrals (fallback): #c2c2c2, #cccccc, #e7e7e7, #efefef, #f3f3f3, #ffffff, #ebdbde\n\nChoose a text color from ALLOWED_COLORS that gives strong contrast (prefer #000000 on light backgrounds, #ffffff on dark backgrounds).\n\nValidate both colors against ALLOWED_COLORS; if either fails, set background #c2c2c2, text #000000.\n\nOutput the JSON exactly in the schema below.\n\nALLOWED_COLORS\n\n#000000, #434343, #666666, #999999, #cccccc, #efefef, #f3f3f3, #ffffff, #fb4c2f, #ffad47, #fad165, #16a766, #43d692, #4a86e8, #a479e2, #f691b3, #f6c5be, #ffe6c7, #fef1d1, #b9e4d0, #c6f3de, #c9daf8, #e4d7f5, #fcdee8, #efa093, #ffd6a2, #fce8b3, #89d3b2, #a0eac9, #a4c2f4, #d0bcf1, #fbc8d9, #e66550, #ffbc6b, #fcda83, #44b984, #68dfa9, #6d9eeb, #b694e8, #f7a7c0, #cc3a21, #eaa041, #f2c960, #149e60, #3dc789, #3c78d8, #8e63ce, #e07798, #ac2b16, #cf8933, #d5ae49, #0b804b, #2a9c68, #285bac, #653e9b, #b65775, #822111, #a46a21, #aa8831, #076239, #1a764d, #1c4587, #41236d, #83334c, #464646, #e7e7e7, #0d3472, #b6cff5, #0d3b44, #98d7e4, #3d188e, #e3d7ff, #711a36, #fbd3e0, #8a1c0a, #f2b2a8, #7a2e0b, #ffc8af, #7a4706, #ffdeb5, #594c05, #fbe983, #684e07, #fdedc1, #0b4f30, #b3efd3, #04502e, #a2dcc1, #c2c2c2, #4986e7, #2da2bb, #b99aff, #994a64, #f691b2, #ff7537, #ffad46, #662e37, #ebdbde, #cca6ac, #094228, #42d692, #16a765\n\nOutput schema (must match exactly)\n\n{\n\"name\": \"string\",\n\"labelListVisibility\": \"labelShow\",\n\"messageListVisibility\": \"show\",\n\"color\": {\n\"backgroundColor\": \"string\",\n\"textColor\": \"string\"\n}\n}\n\nExamples (follow the rules above)\n\nInput: SECURITY → background #fb4c2f, text #ffffff\nInput: DEVOPS → background #653e9b, text #ffffff\nInput: INFO → background #4a86e8, text #ffffff\nInput: DOCS → background #a4c2f4, text #000000\nInput: UNKNOWN → background #c2c2c2, text #000000"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        1712,
+        496
+      ],
+      "id": "79e20f97-3e85-4e74-9cde-239f5d76de98",
+      "name": "Label Generation",
+      "executeOnce": false,
+      "alwaysOutputData": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "mode": "chooseBranch"
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2272,
+        -48
+      ],
+      "id": "49ac2000-de06-45cb-b461-47a4d365d114",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "resource": "label",
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        2528,
+        -48
+      ],
+      "id": "9f9761b4-b828-49e8-966c-95b0b70d9a78",
+      "name": "Get many labels1",
+      "webhookId": "174838f3-d1eb-462e-a349-e977324ce563",
+      "executeOnce": true,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "i1ICRHhLZ1MjQ6Fk",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "3ec67e89-c05d-4164-b521-d166dfaaabd0",
+              "leftValue": "={{ $json.name }}",
+              "rightValue": "AI_",
+              "operator": {
+                "type": "string",
+                "operation": "startsWith"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        2704,
+        -48
+      ],
+      "id": "8c474618-751f-4f9f-a950-376b1088b124",
+      "name": "Filter1",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "mode": "chooseBranch",
+        "useDataOfInput": 2
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2560,
+        192
+      ],
+      "id": "1aaeaabb-e1a2-44d0-b19c-9a81e08d8a1a",
+      "name": "Merge2"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "include": "specifiedFields",
+        "fieldsToInclude": "id,name",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        2896,
+        -48
+      ],
+      "id": "10867710-f47c-483c-ad7d-20ca95c74d5f",
+      "name": "ExistingAiLabelsAfterCreate",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const labelList = $(\"ExistingAiLabelsAfterCreate\").first().json.data\nconsole.log(labelList)\n\nconst labelsByName = Object.fromEntries(\n  labelList\n    .filter(x => x && x.name && x.id)\n    .map(x => [String(x.name).toUpperCase(), String(x.id)])\n);\n\nconsole.log(labelsByName)\n\nconst inputItems = $input.all();\n\nconst out = inputItems.map(it => {\n  const add = Array.isArray(it.json.add) ? it.json.add : [];\n\n\n  \n  const addLabelIds = add\n    .map(v => {\n      const s = String(v).trim();\n      const id = labelsByName[s.toUpperCase()] || null; // lookup by name\n      return id;\n    })\n    .filter(Boolean); // drop unknowns/nulls\n\n  return {\n    json: {\n      ...it.json,\n      addLabelIds\n    },\n    binary: it.binary\n  };\n});\n\nreturn out;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2704,
+        192
+      ],
+      "id": "56e37325-6781-4248-a166-27694530f4ba",
+      "name": "mapLabelIds"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://gmail.googleapis.com/gmail/v1/users/me/labels",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "gmailOAuth2",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"name\": \"{{ $json.name }}\",\n  \"labelListVisibility\": \"labelShow\",\n  \"messageListVisibility\": \"show\",\n  \"color\": {\n    \"backgroundColor\": \"{{ $json.color.backgroundColor }}\",\n    \"textColor\": \"{{ $json.color.textColor }}\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2048,
+        592
+      ],
+      "id": "4791a8d6-ba1e-4d9a-ac01-9e479ac77203",
+      "name": "CreateLabel",
+      "executeOnce": false,
+      "alwaysOutputData": false,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "i1ICRHhLZ1MjQ6Fk",
+          "name": "Gmail account 2"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://gmail.googleapis.com/gmail/v1/users/me/messages/{{ $json.id }}/modify",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "gmailOAuth2",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { addLabelIds: $json.addLabelIds, removeLabelIds: [] } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        3312,
+        -64
+      ],
+      "id": "e5c31d1f-2fda-49ee-843f-23c6077e44dd",
+      "name": "ApplyLabel",
+      "executeOnce": false,
+      "alwaysOutputData": true,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "i1ICRHhLZ1MjQ6Fk",
+          "name": "Gmail account 2"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "batchSize": 10,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        3424,
+        160
+      ],
+      "id": "f3c078e9-68b5-4189-acda-5717d9f254b1",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        3568,
+        -48
+      ],
+      "id": "4a105c25-290d-4074-8c0e-a6ac72996680",
+      "name": "Wait",
+      "webhookId": "d4df312f-fc5a-4ec2-8063-6a618c336209"
+    },
+    {
+      "parameters": {
+        "jsCode": "const MAX_CHARS = 6000;          // ~1500 tokens. Bump if your model ctx allows.\nconst KEEP_URLS = false;         // set true to keep URLs\n\nfunction stripZeroWidth(s) {\n  return (s || \"\").replace(/[\\u200B-\\u200F\\uFEFF]/g, \"\");\n}\n\nfunction decodeRFC2047(str) {\n  if (!str) return \"\";\n  // =?UTF-8?Q?...?=\n  str = str.replace(/=\\?([^?]+)\\?Q\\?([^?]+)\\?=/gi, (_, __, q) =>\n    decodeQuotedPrintable(q, 'utf8')\n  );\n  // =?UTF-8?B?...base64...?=\n  str = str.replace(/=\\?([^?]+)\\?B\\?([^?]+)\\?=/gi, (_, __, b64) => {\n    try { return Buffer.from(b64, 'base64').toString('utf8'); }\n    catch { return b64; }\n  });\n  return str;\n}\nfunction decodeQuotedPrintable(qp) {\n  return qp\n    .replace(/_/g, ' ')\n    .replace(/=([0-9A-F]{2})/gi, (_, h) => String.fromCharCode(parseInt(h,16)));\n}\n\nfunction stripQuoted(text) {\n  if (!text) return \"\";\n  // cut at first common reply marker\n  const parts = text.split(/\\n>|\\nOn .*wrote:|\\n-----Original Message-----/i);\n  return parts[0];\n}\n\nfunction stripSquareBracketLinks(s) {\n  // lines like: [https://...]\n  return s.replace(/\\[https?:\\/\\/[^\\]\\s]+\\]/g, \"\");\n}\n\nfunction removeUrls(s) {\n  if (KEEP_URLS) return s;\n  return s.replace(/https?:\\/\\/\\S+/g, \"\");\n}\n\nfunction collapseWhitespace(s) {\n  return s\n    .replace(/[ \\t]+/g, \" \")\n    .replace(/\\r/g, \"\")\n    .replace(/\\n{3,}/g, \"\\n\\n\")\n    .trim();\n}\n\nfunction truncate(s, max) {\n  if (!s) return \"\";\n  return s.length > max ? s.slice(0, max) : s;\n}\n\nconst out = $input.all().map(it => {\n  const j = it.json || {};\n\n  // Normalize headers\n  const from = String(j.headers?.from || j.from || \"\").replace(/^From:\\s*/i,\"\");\n  const rawSubject = String(j.headers?.subject || j.subject || \"\").replace(/^Subject:\\s*/i,\"\");\n  const subject = decodeRFC2047(stripZeroWidth(rawSubject));\n\n  // Clean text\n  let text = String(j.text || \"\");\n  text = stripZeroWidth(text);\n  text = stripQuoted(text);\n  text = stripSquareBracketLinks(text);\n  text = removeUrls(text);\n  text = collapseWhitespace(text);\n  text = truncate(text, MAX_CHARS);\n\n  // Keep only AI_* already on message (optional; if you built it elsewhere skip)\n  const existingAiOnMessage = (j.labels || [])\n    .map(x => String(x).toUpperCase())\n    .filter(x => /^AI_[A-Z0-9_]+$/.test(x));\n\n  return {\n    json: {\n      id: j.id,\n      labelIds: j.labelIds,\n      existingAiOnMessage,\n      from,\n      subject,\n      text_clean: text\n    },\n    binary: it.binary\n  };\n});\n\nreturn out;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1024,
+        128
+      ],
+      "id": "e1d87f2b-fe89-476e-b3de-5ba873f9421a",
+      "name": "Sanitize",
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "content": "## Fetch emails and labels \n- Filter only labels starting with AI_\n- Get emails from the last 25 hours\n- Filter only emails that have not yet been processes ",
+        "height": 720,
+        "width": 1168,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -544,
+        -192
+      ],
+      "typeVersion": 1,
+      "id": "8288f629-8130-4ba2-bd87-2b06ba21817c",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## Process the emails to find labels to add",
+        "height": 512,
+        "width": 656,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        992,
+        -160
+      ],
+      "typeVersion": 1,
+      "id": "c6758bd1-88a9-4ad2-9437-e7ea97b47eaa",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nfor (const item of $input.all()) {\n const json = item.json;\n  if (!Array.isArray(json.add)) json.add = [];\n  if (!json.add.includes(\"AI_PROCESSED\")) {\n    json.add.push(\"AI_PROCESSED\");\n  }\n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1520,
+        208
+      ],
+      "id": "6c7cd6c2-1ba7-4a08-a84c-d379ee412e78",
+      "name": "AddAI_PROCESSEDLabel"
+    },
+    {
+      "parameters": {
+        "content": "## Generate the settings for the new labels",
+        "height": 416,
+        "width": 656,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        992,
+        384
+      ],
+      "typeVersion": 1,
+      "id": "9572d130-286e-401e-b40b-cd778870bfcb",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 30
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -416,
+        112
+      ],
+      "id": "c75f223e-937d-47ca-a7da-8647be15ab95",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "const labelList = $(\"ExistingAiLabels\").first().json.data\n\nconst labelsById = Object.fromEntries(\n  labelList\n    .filter(x => x && x.name && x.id)\n    .map(x => [String(x.id), String(x.name).toUpperCase()])\n);\n\nconst inputItems = $input.all();\n\nconsole.log(inputItems)\n\nconst out = inputItems.map(it => {\n  const existingLabelIds = Array.isArray(it.json.labelIds) ? it.json.labelIds : [];\n  \n  const labels = existingLabelIds\n    .map(v => {\n      const s = String(v).trim();\n      const id = labelsById[s] || null;\n      return id;\n    })\n    .filter(Boolean);\n\n  return {\n    json: {\n      ...it.json,\n      labels\n    },\n    binary: it.binary\n  };\n});\n\nreturn out;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        848,
+        128
+      ],
+      "id": "b5298b48-26ca-4a17-861e-ca3715788127",
+      "name": "mapLabelIds1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "01d666cc-6768-419f-bb82-727efd0f907c",
+              "leftValue": "={{ $json }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1408,
+        496
+      ],
+      "id": "b69853bd-4cb2-43f9-8610-b4397c01a7d6",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "content": "## Request to apply labels \n- wait to not overload gmail API",
+        "height": 544,
+        "width": 624,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        3184,
+        -128
+      ],
+      "typeVersion": 1,
+      "id": "b1ca4d92-a698-41c3-8b5c-c7fdbb3f88bd",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "## Fetch all labels\n\n- Map newly created labels to their ID\n",
+        "height": 528,
+        "width": 624,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2464,
+        -112
+      ],
+      "typeVersion": 1,
+      "id": "cf4a9ca4-651a-4df0-93cd-5525d4899414",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "## Request to create new labels",
+        "height": 448,
+        "width": 512,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1696,
+        416
+      ],
+      "typeVersion": 1,
+      "id": "582553b8-fcc2-4e8b-b87b-c705b24ed694",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "options": {
+          "avatar_url": "={{ $('Values').first().json.discord_avatar }}",
+          "username": "Gmail labelling"
+        },
+        "embeds": {
+          "values": [
+            {
+              "description": "=",
+              "color": "#51FF00",
+              "timestamp": "={{ $now }}",
+              "title": "=Succesfully labeled {{ $input.all().length }} emails."
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        3872,
+        144
+      ],
+      "id": "5d46ae2c-cb83-456e-8d62-9b1a6c95bb85",
+      "name": "Discord",
+      "webhookId": "47c25ff6-4a13-4aaf-ab36-69fd3585efc6",
+      "executeOnce": true,
+      "credentials": {
+        "discordWebhookApi": {
+          "id": "7NPG2nsCqzHQgIrE",
+          "name": "discord logs"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\n  \"email_limit\": 30,\n  \"discord_avatar\": \"https://cloud.gmelius.com/public/logos/google/Gmail_Logo_512px.png\",\n  \"errors\": [],\n  \"success\": []\n}\n",
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -144,
+        112
+      ],
+      "id": "8ad9b336-2c93-4528-8860-6f08fef3202a",
+      "name": "Values"
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "options": {
+          "avatar_url": "={{ $('Values').first().json.discord_avatar }}",
+          "username": "Gmail labelling"
+        },
+        "embeds": {
+          "values": [
+            {
+              "description": "={{ $input.all().map(i => \"Name: \" + i.json.name + \"\\nDescription: \" + i.json.error.description + \"\\n\\n\") }}\n",
+              "color": "#FF0000",
+              "timestamp": "={{ $now }}",
+              "title": "=Error creating some labels\n"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        2352,
+        688
+      ],
+      "id": "0b6fa5e1-eb64-41e3-bce8-95d941c1ee72",
+      "name": "Discord1",
+      "webhookId": "47c25ff6-4a13-4aaf-ab36-69fd3585efc6",
+      "executeOnce": true,
+      "credentials": {
+        "discordWebhookApi": {
+          "id": "7NPG2nsCqzHQgIrE",
+          "name": "discord logs"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "options": {
+          "avatar_url": "={{ $('Values').first().json.discord_avatar }}",
+          "username": "Gmail labelling"
+        },
+        "embeds": {
+          "values": [
+            {
+              "description": "={{ $input.all().map(i => \"Name: \" + i.json.name + \"\\n\\n\") }}\n",
+              "color": "#51FF00",
+              "timestamp": "={{ $now }}",
+              "title": "=Created new labels"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        2352,
+        512
+      ],
+      "id": "19a8b68b-7f9e-4500-bb66-af6c68b6a576",
+      "name": "Discord2",
+      "webhookId": "47c25ff6-4a13-4aaf-ab36-69fd3585efc6",
+      "executeOnce": true,
+      "credentials": {
+        "discordWebhookApi": {
+          "id": "7NPG2nsCqzHQgIrE",
+          "name": "discord logs"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "content": "TEST",
+        "options": {},
+        "embeds": {
+          "values": [
+            {
+              "description": "resr",
+              "author": "aaaaa",
+              "timestamp": "={{ $now }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        -32,
+        -560
+      ],
+      "id": "e85c17d4-c87c-4e0e-8565-5812615c551d",
+      "name": "Discord3",
+      "webhookId": "f89fca8f-212b-4a6b-8509-c6fc1e79b660",
+      "credentials": {
+        "discordWebhookApi": {
+          "id": "4MTxmE7xHFNdZdwl",
+          "name": "Discord Webhook account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Discord3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many messages": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "AddAI_PROCESSEDLabel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many labels": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "ExistingAiLabels",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ExistingAiLabels": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "mapLabelIds1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NewLabels": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Label Generation",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Label Generation": {
+      "main": [
+        [
+          {
+            "node": "CreateLabel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Get many labels1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Get many labels1": {
+      "main": [
+        [
+          {
+            "node": "Filter1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter1": {
+      "main": [
+        [
+          {
+            "node": "ExistingAiLabelsAfterCreate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge2": {
+      "main": [
+        [
+          {
+            "node": "mapLabelIds",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ExistingAiLabelsAfterCreate": {
+      "main": [
+        [
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "mapLabelIds": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CreateLabel": {
+      "main": [
+        [
+          {
+            "node": "Discord2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Discord1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ApplyLabel": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Discord",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ApplyLabel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sanitize": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AddAI_PROCESSEDLabel": {
+      "main": [
+        [
+          {
+            "node": "NewLabels",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Values",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "mapLabelIds1": {
+      "main": [
+        [
+          {
+            "node": "Sanitize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ],
+        [
+          {
+            "node": "Label Generation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Discord": {
+      "main": [
+        []
+      ]
+    },
+    "Values": {
+      "main": [
+        [
+          {
+            "node": "Get many messages",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get many labels",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Discord1": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Discord2": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "64fcaea4705e78307362a2cec8e6fd01c6a34a54a60889be950850213130e94f"
+  }
+}
