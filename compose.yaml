@@ -1,0 +1,54 @@
+services:
+
+    php:
+        build:
+            context: .
+            dockerfile: ./docker/php/Dockerfile
+            target: frankenphp_dev
+            args:
+                UID: ${UID:-1000}
+                GID: ${GID:-1000}
+        volumes:
+            - ./app:/app
+        environment:
+            - APP_ENV=dev
+            - APP_DEBUG=1
+        networks:
+            - internal
+        depends_on:
+            - database
+        ports:
+            - "${APP_PORT:-8086}:80"
+        extra_hosts:
+            - "host.docker.internal:host-gateway"
+        # comment the following line in production, it allows to have nice human-readable logs in dev
+        tty: true
+        healthcheck:
+            test: [ "CMD-SHELL", "php", "-v" ]
+            interval: 10s
+            timeout: 5s
+            retries: 3
+
+
+    ###> doctrine/doctrine-bundle ###
+    database:
+        image: postgres:${POSTGRES_VERSION:-16}-alpine
+        environment:
+            POSTGRES_DB: ${POSTGRES_DB:-app}
+            # You should definitely change the password in production
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-!ChangeMe!}
+            POSTGRES_USER: ${POSTGRES_USER:-app}
+        ports:
+            - "${DATABASE_PORT:-5439}:5432"
+        healthcheck:
+            test: ["CMD", "pg_isready", "-d", "${POSTGRES_DB:-app}", "-U", "${POSTGRES_USER:-app}"]
+            timeout: 5s
+            retries: 5
+            start_period: 60s
+        networks:
+            - internal
+        volumes:
+            - ./database_data:/var/lib/postgresql/data:rw
+
+networks:
+    internal: ~
