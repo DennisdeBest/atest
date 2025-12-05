@@ -1,0 +1,1 @@
+{"version":2,"defects":{"App\\Tests\\Entity\\FileUploadTest::testValidCsvUploadIsAccepted":8,"App\\Tests\\Entity\\FileUploadTest::testHtmlUploadIsRejected":8},"times":{"App\\Tests\\Entity\\FileUploadTest::testValidCsvUploadIsAccepted":0.015,"App\\Tests\\Entity\\FileUploadTest::testHtmlUploadIsRejected":0.001}}

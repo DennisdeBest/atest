@@ -34,3 +34,7 @@ composer *COMMAND:
 [group: 'App']
 make *COMMAND:
     just console make:{{ COMMAND }}
+
+[group: 'Test']
+test:
+    just command ./bin/phpunit
