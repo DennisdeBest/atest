@@ -9,10 +9,6 @@ class FileUploadTest extends ApiTestCase
 {
     protected static ?bool $alwaysBootKernel = true;
 
-    public function setUp(): void {
-//        $_ENV['APP_ENV'] = 'test';
-    }
-
     private function setupTestfile(string $filename): string
     {
         $path = __DIR__ . '/../fixtures/' . $filename;
