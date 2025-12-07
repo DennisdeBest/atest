@@ -2,16 +2,14 @@
 
 use Symfony\Component\Dotenv\Dotenv;
 
-
-require dirname(__DIR__) . '/vendor/autoload.php';
+require dirname(__DIR__).'/vendor/autoload.php';
 
 if (method_exists(Dotenv::class, 'bootEnv')) {
-    (new Dotenv())->bootEnv(dirname(__DIR__) . '/.env');
+    new Dotenv()->bootEnv(dirname(__DIR__).'/.env');
 }
 
-
 if ($_SERVER['APP_DEBUG']) {
-    umask(0000);
+    umask(0o000);
 }
 
 passthru(sprintf(
@@ -20,7 +18,12 @@ passthru(sprintf(
 ));
 
 passthru(sprintf(
-    'APP_ENV=test php "%s/../bin/console" doctrine:database:create',
+    'APP_ENV=test php "%s/../bin/console" doctrine:database:drop --if-exists --force',
+    __DIR__
+));
+
+passthru(sprintf(
+    'APP_ENV=test php "%s/../bin/console" doctrine:database:create --if-not-exists',
     __DIR__
 ));
 

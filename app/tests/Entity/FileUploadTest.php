@@ -11,7 +11,7 @@ class FileUploadTest extends ApiTestCase
 
     private function setupTestfile(string $filename): string
     {
-        $path = __DIR__ . '/../fixtures/' . $filename;
+        $path = __DIR__.'/../fixtures/'.$filename;
 
         $tmpPath = tempnam(sys_get_temp_dir(), 'upload_test_');
         copy($path, $tmpPath);
@@ -23,16 +23,17 @@ class FileUploadTest extends ApiTestCase
     {
         $client = static::createClient();
 
-        self::assertSame('test', $_SERVER['APP_ENV'] ?? null);
-
         $tmpPath = $this->setupTestfile('valid.csv');
 
-        $response = $client->request('POST', '/api/file_uploads', [
+        $response = $client->request('POST', '/api/files', [
             'headers' => [
                 'accept' => 'application/ld+json',
                 'Content-Type' => 'multipart/form-data',
             ],
             'extra' => [
+                'parameters' => [
+                    'requestedOutputFormat' => 'json',
+                ],
                 'files' => [
                     'file' => new UploadedFile(
                         $tmpPath,
@@ -46,7 +47,7 @@ class FileUploadTest extends ApiTestCase
 
         self::assertResponseStatusCodeSame(201);
         self::assertJsonContains([
-            '@type' => 'FileUpload',
+            '@type' => 'File',
         ]);
     }
 
@@ -54,16 +55,18 @@ class FileUploadTest extends ApiTestCase
     {
         $client = static::createClient();
 
-
-        $response = $client->request('POST', '/api/file_uploads', [
+        $response = $client->request('POST', '/api/files', [
             'headers' => [
                 'accept' => 'application/ld+json',
                 'Content-Type' => 'multipart/form-data',
             ],
             'extra' => [
+                'parameters' => [
+                    'requestedOutputFormat' => 'json',
+                ],
                 'files' => [
                     'file' => new UploadedFile(
-                        __DIR__ . '/../fixtures/invalid.html',
+                        __DIR__.'/../fixtures/invalid.html',
                         'invalid.html',
                         'text/html',
                         test: true,
@@ -73,12 +76,9 @@ class FileUploadTest extends ApiTestCase
         ]);
 
         self::assertResponseStatusCodeSame(422);
-
         self::assertJsonContains([
             'violations' => [
-                [
-                    'propertyPath' => 'file',
-                ],
+                ['propertyPath' => 'file'],
             ],
         ]);
     }

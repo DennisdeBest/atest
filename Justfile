@@ -27,6 +27,10 @@ console *COMMAND:
   just command php bin/console {{ COMMAND }}
 
 [group: 'App']
+shell:
+  just command bash
+
+[group: 'App']
 composer *COMMAND:
     just command composer {{ COMMAND }}
 
@@ -37,3 +41,13 @@ make *COMMAND:
 [group: 'Test']
 test:
     just command ./bin/phpunit
+
+[group: 'Clean']
+fix:
+    just command php-cs-fixer fix .
+
+[group: 'Database']
+reset-db ENV='dev':
+    just console doctrine:database:drop --if-exists --env={{ ENV }} --force && \
+    just console doctrine:database:create --env={{ ENV }} && \
+    just console doctrine:migrations:migrate --env={{ ENV }} --no-interaction

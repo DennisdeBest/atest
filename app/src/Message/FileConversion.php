@@ -6,7 +6,6 @@ use App\Entity\FileConversion as FileConversionEntity;
 
 class FileConversion
 {
-
     public function __construct(private FileConversionEntity $fileConversion)
     {
     }

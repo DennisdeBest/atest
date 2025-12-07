@@ -2,10 +2,9 @@
 
 namespace App\Entity;
 
-use ApiPlatform\Metadata\ApiResource;
-use ApiPlatform\Metadata\Get;
-use ApiPlatform\Metadata\Post;
-use App\State\FileUploadProcessor;
+use ApiPlatform\Metadata\ApiProperty;
+use App\Enum\FileInputFormat;
+use App\Enum\FileOutputFormat;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\HttpFoundation\File\File;
 use Symfony\Component\Serializer\Attribute\Groups;
@@ -13,32 +12,15 @@ use Symfony\Component\Uid\Uuid;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity]
-#[ApiResource(
-    operations: [
-        new Get(normalizationContext: ['groups' => ['file:read']]),
-        new Post(
-            inputFormats: ['multipart' => ['multipart/form-data']],
-            normalizationContext: ['groups' => ['file:read']],
-            denormalizationContext: ['groups' => ['file:write']],
-            processor: FileUploadProcessor::class,
-        ),
-    ]
-)]
 class FileUpload
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    #[Groups(['file:read'])]
     private ?int $id = null;
 
     #[ORM\Column(type: 'uuid', unique: true)]
-    #[Groups(['file:read'])]
     private ?Uuid $uid;
-
-    #[ORM\Column(length: 255)]
-    #[Groups(['file:read'])]
-    private string $path;
 
     #[Groups(['file:write'])]
     #[Assert\File(
@@ -51,7 +33,25 @@ class FileUpload
         ],
         mimeTypesMessage: 'Only CSV, JSON, XLSX and ODS files are allowed.',
     )]
-    public ?File $file = null;
+    public File $file;
+
+    #[ORM\Column(enumType: FileInputFormat::class)]
+    private ?FileInputFormat $inputFormat = null;
+
+    #[Groups(['file:write'])]
+    #[ORM\Column(type: 'string', enumType: FileOutputFormat::class)]
+    #[ApiProperty(
+        openapiContext: [
+            'type' => 'string',
+            'enum' => ['json', 'xml'],
+            'example' => 'json',
+            'description' => 'Desired output format for the converted file.',
+        ]
+    )]
+    private FileOutputFormat $requestedOutputFormat;
+
+    #[ORM\Column(length: 255)]
+    private ?string $filename = null;
 
     public function __construct()
     {
@@ -68,13 +68,39 @@ class FileUpload
         return $this->uid;
     }
 
-    public function getPath(): string
+    public function getInputFormat(): ?FileInputFormat
     {
-        return $this->path;
+        return $this->inputFormat;
     }
 
-    public function setPath(string $path): void
+    public function setInputFormat(FileInputFormat $inputFormat): static
     {
-        $this->path = $path;
+        $this->inputFormat = $inputFormat;
+
+        return $this;
+    }
+
+    public function getRequestedOutputFormat(): ?FileOutputFormat
+    {
+        return $this->requestedOutputFormat;
+    }
+
+    public function setRequestedOutputFormat(FileOutputFormat $requestedOutputFormat): static
+    {
+        $this->requestedOutputFormat = $requestedOutputFormat;
+
+        return $this;
+    }
+
+    public function getFilename(): ?string
+    {
+        return $this->filename;
+    }
+
+    public function setFilename(string $filename): static
+    {
+        $this->filename = $filename;
+
+        return $this;
     }
 }
