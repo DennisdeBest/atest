@@ -20,10 +20,10 @@ enum FileInputFormat: string
     public function mimeType(): string
     {
         return match ($this) {
-            self::CSV  => 'text/csv',
+            self::CSV => 'text/csv',
             self::JSON => 'application/json',
             self::XLSX => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            self::ODS  => 'application/vnd.oasis.opendocument.spreadsheet',
+            self::ODS => 'application/vnd.oasis.opendocument.spreadsheet',
         };
     }
 

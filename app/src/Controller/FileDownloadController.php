@@ -29,7 +29,7 @@ final readonly class FileDownloadController
             throw new NotFoundHttpException('File not found.');
         }
 
-        if ($entity->getStatus() !== FileConversionStatus::Finished) {
+        if (FileConversionStatus::Finished !== $entity->getStatus()) {
             throw new NotFoundHttpException('File not ready.');
         }
 

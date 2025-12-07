@@ -16,7 +16,7 @@ enum FileOutputFormat: string
     {
         return match ($this) {
             self::JSON => 'application/json',
-            self::XML  => 'application/xml',
+            self::XML => 'application/xml',
         };
     }
 

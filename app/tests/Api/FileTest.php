@@ -128,7 +128,7 @@ class FileTest extends ApiTestCase
         self::assertArrayHasKey('content-disposition', $headers);
         self::assertStringContainsString('attachment', $headers['content-disposition'][0]);
 
-         self::assertArrayHasKey('content-type', $headers);
-         self::assertStringContainsString('application/json', $headers['content-type'][0]);
+        self::assertArrayHasKey('content-type', $headers);
+        self::assertStringContainsString('application/json', $headers['content-type'][0]);
     }
 }
