@@ -44,6 +44,24 @@ Or in one line:
 just build up logs
 ```
 
+#### Test
+
+The tests are setup with [PHPUnit](https://phpunit.de/).
+They can be run with the following command:
+
+```shell
+just test
+```
+
+#### Lint
+
+The code is linted with PHP-CS-Fixer.
+It can be run with the following command:
+
+```shell
+just lint
+```
+
 ### Production
 
 The development and test environments run the workers synschronously. To test the production environment, you need to run the workers asynchronously.

@@ -43,7 +43,7 @@ test:
     just command ./bin/phpunit
 
 [group: 'Clean']
-fix:
+lint:
     just command php-cs-fixer fix .
 
 [group: 'Database']
