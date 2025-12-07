@@ -9,6 +9,19 @@ enum FileOutputFormat: string
 
     public static function getValues(): array
     {
-        return [self::JSON->value, self::XML->value];
+        return array_column(self::cases(), 'value');
+    }
+
+    public function mimeType(): string
+    {
+        return match ($this) {
+            self::JSON => 'application/json',
+            self::XML  => 'application/xml',
+        };
+    }
+
+    public function extension(): string
+    {
+        return $this->value;
     }
 }

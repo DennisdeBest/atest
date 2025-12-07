@@ -47,7 +47,7 @@ use Symfony\Component\Uid\Uuid;
                         ])
                     ),
                 ],
-                summary: 'Get the status of a converted file',
+                summary: 'Get the status of a file conversion request',
                 description: 'Returns the conversion status, requested output format, and HATEOAS links.'
             ),
             shortName: 'File',
@@ -160,7 +160,7 @@ final class File
         openapiContext: [
             'type' => 'string',
             'enum' => ['queued', 'processing', 'finished', 'failed'],
-            'example' => 'queued',
+            'examples' => ['queued'],
             'description' => 'Current status of the file conversion.',
         ]
     )]
@@ -172,7 +172,7 @@ final class File
         openapiContext: [
             'type' => 'string',
             'enum' => ['json', 'xml'],
-            'example' => 'json',
+            'examples' => ['json'],
             'description' => 'Requested output format for the converted file.',
         ]
     )]

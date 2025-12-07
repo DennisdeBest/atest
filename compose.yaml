@@ -11,6 +11,7 @@ services:
             - ./app:/app
         environment:
             - DATABASE_URL=postgresql://app:!ChangeMe!@database:5432/app?serverVersion=17.6&charset=utf8
+            - MESSENGER_TRANSPORT_DSN=sync://
         networks:
             - internal
         depends_on:

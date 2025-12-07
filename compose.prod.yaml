@@ -1,0 +1,81 @@
+services:
+  php_prod:
+    build:
+      context: .
+      dockerfile: ./docker/php/Dockerfile
+      target: frankenphp_prod
+    volumes:
+      - data:/app/data
+    environment:
+      APP_ENV: prod
+      APP_DEBUG: 0
+      DATABASE_URL: postgresql://app:!ChangeMe!@database_prod:5432/app?serverVersion=17.6&charset=utf8
+      # adjust if you use something else for Messenger
+      # e.g. doctrine, redis, rabbitmq...
+      MESSENGER_TRANSPORT_DSN: doctrine://default
+      CONVERSION_DELAY: 1
+    networks:
+      - internal
+    depends_on:
+      database_prod:
+        condition: service_healthy
+    ports:
+      - "${APP_PORT:-8087}:80"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    tty: true
+    healthcheck:
+      test: [ "CMD-SHELL", "php", "-v" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  messenger_worker_prod:
+    build:
+      context: .
+      dockerfile: ./docker/php/Dockerfile
+      target: frankenphp_prod
+    volumes:
+      - data:/app/data
+    environment:
+      APP_ENV: prod
+      APP_DEBUG: 0
+      DATABASE_URL: postgresql://app:!ChangeMe!@database_prod:5432/app?serverVersion=17.6&charset=utf8
+      MESSENGER_TRANSPORT_DSN: doctrine://default
+      CONVERSION_DELAY: 1
+    command: >
+      php bin/console messenger:consume async
+        --time-limit=3600
+        --memory-limit=256M
+        --no-interaction
+    depends_on:
+      database_prod:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - internal
+
+  database_prod:
+    image: postgres:${POSTGRES_VERSION:-17.6}-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-!ChangeMe!}
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+    ports:
+      - "${DATABASE_PORT:-5440}:5432"
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-d", "${POSTGRES_DB:-app}", "-U", "${POSTGRES_USER:-app}" ]
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - internal
+    volumes:
+      - database_data_prod:/var/lib/postgresql/data:rw
+
+networks:
+  internal: ~
+
+volumes:
+  database_data_prod:
+  data:

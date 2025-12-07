@@ -93,33 +93,42 @@ USER appuser
 
 CMD [ "frankenphp", "run", "--config", "/etc/caddy/Caddyfile", "--watch" ]
 
-# Prod FrankenPHP image
-FROM frankenphp_base AS composer_install
+# Prod FrankenPHP image (final image used in compose.prod.yml)
+FROM frankenphp_base AS frankenphp_prod
 
 ENV APP_ENV=prod
+ENV APP_DEBUG=0
 
-COPY --link . ./
-RUN rm -Rf docker/php/
+WORKDIR /app
 
 RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
-
 COPY --link docker/php/conf.d/app.prod.ini $PHP_INI_DIR/conf.d/
-COPY --link docker/php/worker.Caddyfile /etc/caddy/worker.Caddyfile
-# prevent the reinstallation of vendors at every changes in the source code
-COPY --link composer.* symfony.* ./
-RUN set -eux; \
-	composer install --no-cache --prefer-dist --no-dev --no-autoloader --no-scripts --no-progress
+COPY --link docker/php/Caddyfile /etc/caddy/Caddyfile
 
-FROM frankenphp_upstream AS frankenphp_prod
-
-ENV APP_ENV=prod
-ENV FRANKENPHP_CONFIG="import worker.Caddyfile"
-
-RUN rm -Rf docker/
+COPY --link ./app/composer.* ./app/symfony.* ./
 
 RUN set -eux; \
-	mkdir -p var/cache var/log; \
-	composer dump-autoload --classmap-authoritative --no-dev; \
-	composer dump-env prod; \
-	composer run-script --no-dev post-install-cmd; \
-	chmod +x bin/console; sync;
+  composer install \
+    --no-cache \
+    --prefer-dist \
+    --no-dev \
+    --no-scripts \
+    --no-progress \
+    --no-interaction
+
+COPY --link ./app /app
+
+RUN rm -rf docker/
+
+
+RUN set -eux; \
+    mkdir -p var/cache var/log var/uploads var/conversions; \
+    chown -R www-data:www-data var
+
+
+RUN set -eux; \
+    composer dump-autoload --classmap-authoritative --no-dev; \
+    composer dump-env prod; \
+    composer run-script --no-dev post-install-cmd; \
+    chmod +x bin/console; \
+    sync

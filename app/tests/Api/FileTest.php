@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Tests\Entity;
+namespace App\Tests\Api;
 
 use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 
-class FileUploadTest extends ApiTestCase
+class FileTest extends ApiTestCase
 {
     protected static ?bool $alwaysBootKernel = true;
 
@@ -81,5 +81,54 @@ class FileUploadTest extends ApiTestCase
                 ['propertyPath' => 'file'],
             ],
         ]);
+    }
+
+    public function testDownloadReturnsConvertedFile(): void
+    {
+        $client = static::createClient();
+
+        // 1. upload a valid CSV
+        $tmpPath = $this->setupTestfile('valid.csv');
+
+        $uploadResponse = $client->request('POST', '/api/files', [
+            'headers' => [
+                'accept' => 'application/ld+json',
+                'Content-Type' => 'multipart/form-data',
+            ],
+            'extra' => [
+                'parameters' => [
+                    'requestedOutputFormat' => 'json',
+                ],
+                'files' => [
+                    'file' => new UploadedFile(
+                        $tmpPath,
+                        'valid.csv',
+                        'text/csv',
+                        test: true,
+                    ),
+                ],
+            ],
+        ]);
+
+        self::assertResponseStatusCodeSame(201);
+
+        $data = $uploadResponse->toArray();
+        self::assertArrayHasKey('uid', $data);
+
+        $uid = $data['uid'];
+
+        // 2. download the converted file
+        $downloadResponse = $client->request('GET', sprintf('/api/files/%s/download', $uid));
+
+        self::assertResponseIsSuccessful(); // 2xx
+        self::assertSame(200, $downloadResponse->getStatusCode());
+
+        $headers = $downloadResponse->getHeaders(false);
+
+        self::assertArrayHasKey('content-disposition', $headers);
+        self::assertStringContainsString('attachment', $headers['content-disposition'][0]);
+
+         self::assertArrayHasKey('content-type', $headers);
+         self::assertStringContainsString('application/json', $headers['content-type'][0]);
     }
 }

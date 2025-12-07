@@ -14,6 +14,21 @@ enum FileInputFormat: string
 
     public static function getValues(): array
     {
-        return [self::CSV, self::JSON, self::XLSX, self::ODS];
+        return array_column(self::cases(), 'value');
+    }
+
+    public function mimeType(): string
+    {
+        return match ($this) {
+            self::CSV  => 'text/csv',
+            self::JSON => 'application/json',
+            self::XLSX => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            self::ODS  => 'application/vnd.oasis.opendocument.spreadsheet',
+        };
+    }
+
+    public function extension(): string
+    {
+        return $this->value;
     }
 }

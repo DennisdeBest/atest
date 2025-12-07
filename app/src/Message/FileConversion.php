@@ -2,16 +2,17 @@
 
 namespace App\Message;
 
-use App\Entity\FileConversion as FileConversionEntity;
+use Symfony\Component\Uid\Uuid;
 
-class FileConversion
+final readonly class FileConversion
 {
-    public function __construct(private FileConversionEntity $fileConversion)
-    {
+    public function __construct(
+        private Uuid $fileConversionUid,
+    ) {
     }
 
-    public function getFileConversion(): FileConversionEntity
+    public function getFileConversionUid(): string
     {
-        return $this->fileConversion;
+        return $this->fileConversionUid;
     }
 }

@@ -9,7 +9,7 @@ mkdir -p /app/var/cache
 
 if [ "$1" = 'frankenphp' ]; then
   if [ "$APP_ENV" = 'prod' ]; then
-    composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader
+    php bin/console doctrine:migrations:migrate --no-interaction
     php bin/console cache:clear
     php bin/console cache:warmup
   else

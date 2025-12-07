@@ -1,5 +1,5 @@
 api_platform:
-    title: File transfo
+    title: File Conversion
     version: 1.0.0
     path_segment_name_generator: api_platform.path_segment_name_generator.dash
     show_webby: false

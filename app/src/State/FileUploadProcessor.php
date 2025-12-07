@@ -51,7 +51,7 @@ final readonly class FileUploadProcessor implements ProcessorInterface
         $this->entityManager->persist($fileConversion);
         $this->entityManager->flush();
 
-        $conversionMessage = new \App\Message\FileConversion($fileConversion);
+        $conversionMessage = new \App\Message\FileConversion($fileConversion->getUid());
 
         $this->messageBus->dispatch($conversionMessage);
 

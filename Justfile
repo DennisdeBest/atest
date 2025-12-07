@@ -51,3 +51,7 @@ reset-db ENV='dev':
     just console doctrine:database:drop --if-exists --env={{ ENV }} --force && \
     just console doctrine:database:create --env={{ ENV }} && \
     just console doctrine:migrations:migrate --env={{ ENV }} --no-interaction
+
+prod:
+    docker compose -f compose.prod.yaml build
+    docker compose -f compose.prod.yaml up
