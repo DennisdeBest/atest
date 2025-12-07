@@ -52,7 +52,7 @@ final readonly class FileConversionHandler
 
         $filesystem->copy(
             sprintf('%s/%s.%s', $this->uploadDir, $uid, $upload->getInputFormat()->value),
-            sprintf('%s/%s.%s', $this->conversionDir, $uid, $upload->getRequestedOutputFormat()->value),
+            sprintf('%s/%s.%s', $this->conversionDir, $uid, $upload->getOutputFormat()->value),
         );
 
         $conversion->setStatus(FileConversionStatus::Finished);

@@ -1,87 +1,143 @@
-# File conversion
+# File Conversion API
+
+A simple long-running job API: upload a file, wait for processing, then download the converted output.
+
+Supported input formats: CSV, JSON, XLSX, ODS  
+Supported output formats: JSON, XML
+
+Processing is intentionally slow (simulated with a sleep) to demonstrate asynchronous job execution.
+
+## Architecture
+
+This project uses:
+
+- Symfony (API + Messenger)
+- FrankenPHP web server
+- PostgreSQL for job tracking
+- Messenger workers
+    - synchronous in development and tests
+    - asynchronous in production mode (`compose.prod.yml`)
+- Local disk storage for uploaded and converted files
+
+### Workflow
+
+1. `POST /files`  
+   Uploads a source file and selects an output format. Returns a job ID.
+
+2. Worker processes the job asynchronously and generates a dummy converted file.
+
+3. `GET /files/{uid}`  
+   Returns job status (`queued`, `processing`, `finished`, `failed`).
+
+4. `GET /files/{uid}/download`  
+   Downloads the converted output when the job is complete.
+
 
 ## Setup
 
-This project runs on Docker. 
-It was developed on Linux.
+This project runs on Docker.  
+It was developed on Linux but works anywhere Docker is available.
 
-It will instantiate a FrankenPHP server and a PostgreSQL database.
+Running the stack will start:
+
+- a FrankenPHP server
+- a PostgreSQL database
 
 ### Requirements
 
 - Docker
+- (Optional) Just (https://github.com/casey/just) for command shortcuts
 
-## Usage
+## Development
 
-### Development
+Build the Docker image:
 
-[Just](https://github.com/casey/just) is used to simplify the commands for the development environment.
-
-Build the docker image:
-
-```shell
+```sh
 just build
 ```
 
-Start it with:
+Start the environment:
 
-```shell
+```sh
 just up
 ```
 
-By default, the server runs on port 8086.
-The api documentation is available on [localhost:8086/api](http://localhost:8086/api).
+The API will be available at:
 
-check the logs with:
+[http://localhost:8086/api](http://localhost:8086/api)
 
-```shell
+View logs:
+
+```sh
 just logs
 ```
 
-Or in one line:
+Or combined:
 
-```shell
+```sh
 just build up logs
 ```
 
-#### Test
+## Example Workflow
 
-The tests are setup with [PHPUnit](https://phpunit.de/).
-They can be run with the following command:
+```sh
+# 1. Create a job by uploading a file
+curl -F "file=@app/tests/fixtures/valid.csv" -F "outputFormat=json" http://localhost:8086/api/files
 
-```shell
+# This returns: {"@context":"\/api\/contexts\/File","@id":"\/api\/files\/76a1b868-4247-4d50-97f1-423bd0ff2b93","@type":"File","uid":"76a1b868-4247-4d50-97f1-423bd0ff2b93","status":"finished","links":{"status":"\/api\/files\/76a1b868-4247-4d50-97f1-423bd0ff2b93","download":"\/api\/files\/76a1b868-4247-4d50-97f1-423bd0ff2b93\/download"},"format":"json"}%
+
+# 2. Poll job status
+curl http://localhost:8086/api/files/76a1b868-4247-4d50-97f1-423bd0ff2b93
+
+# 3. Download the converted file when done
+curl -OJ http://localhost:8086/api/files/curl http://localhost:8086/api/files/76a1b868-4247-4d50-97f1-423bd0ff2b93/download
+```
+
+## Tests
+
+Tests use PHPUnit and cover the full workflow (upload → job creation → simulated processing → status → download).
+
+Run the test suite:
+
+```sh
 just test
 ```
 
-#### Lint
+## Linting
 
-The code is linted with PHP-CS-Fixer.
-It can be run with the following command:
+The codebase is formatted with PHP-CS-Fixer:
 
-```shell
+```sh
 just lint
 ```
 
-### Production
+## Production Mode (asynchronous workers)
 
-The development and test environments run the workers synschronously. To test the production environment, you need to run the workers asynchronously.
-There is a `compose.prod.yml` file for this purpose.
+In development and test environments, workers run synchronously.
 
-It can be started with:
+To test asynchronous job execution, use the production compose file:
 
-```shell
+```sh
 just prod
 ```
 
-Or: 
+or:
 
-```shell
+```sh
 docker compose -f compose.prod.yml up
 ```
 
-It will be available on port [localhost:8087](http://localhost:8087/api).
+The API will be available at:
 
-The uploaded files will take **120** seconds to be processed.
-During the progress it is possible to check the state.
+```
+http://localhost:8087/api
+```
 
-Once completed the new file can be downloaded from the `download` endpoint.
+Uploaded files will take 120 seconds to process.  
+During that time the job status can be queried, and once complete the file is available at the download endpoint.
+
+## Notes
+
+- The conversion step is simulated and does not perform real format transformation.
+- The implementation is intentionally minimal.
+- Additional ideas and next steps are documented in `TODO.md`.

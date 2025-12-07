@@ -41,7 +41,7 @@ final readonly class FileDownloadController
 
         $upload = $entity->getUpload();
         /** @var FileOutputFormat $format */
-        $format = $upload->getRequestedOutputFormat();
+        $format = $upload->getOutputFormat();
 
         $filename = sprintf(
             '%s.%s',

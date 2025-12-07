@@ -23,7 +23,7 @@ final readonly class FileConversionService
         $this->objectMapper->map($input, $file);
 
         $file->links = $this->getLinks($input);
-        $file->format = $input->getUpload()->getRequestedOutputFormat();
+        $file->format = $input->getUpload()->getOutputFormat();
 
         return $file;
     }
@@ -31,7 +31,7 @@ final readonly class FileConversionService
     public function getConvertedFilePath(FileConversion $entity): string
     {
         $upload = $entity->getUpload();
-        $extension = $upload->getRequestedOutputFormat()->value;
+        $extension = $upload->getOutputFormat()->value;
 
         return sprintf('%s/%s.%s',
             $this->conversionDir,

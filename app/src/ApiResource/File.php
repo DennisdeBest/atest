@@ -127,17 +127,17 @@ use Symfony\Component\Uid\Uuid;
                                         'format' => 'binary',
                                         'description' => 'The file to upload.',
                                     ],
-                                    'requestedOutputFormat' => [
+                                    'outputFormat' => [
                                         'type' => 'string',
                                         'enum' => ['json', 'xml'],
                                         'description' => 'Desired output format.',
                                     ],
                                 ],
-                                'required' => ['file', 'requestedOutputFormat'],
+                                'required' => ['file', 'outputFormat'],
                             ],
                             'example' => [
                                 'file' => '(binary)',
-                                'requestedOutputFormat' => 'json',
+                                'outputFormat' => 'json',
                             ],
                         ],
                     ])

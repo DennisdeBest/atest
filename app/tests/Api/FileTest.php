@@ -32,7 +32,7 @@ class FileTest extends ApiTestCase
             ],
             'extra' => [
                 'parameters' => [
-                    'requestedOutputFormat' => 'json',
+                    'outputFormat' => 'json',
                 ],
                 'files' => [
                     'file' => new UploadedFile(
@@ -62,7 +62,7 @@ class FileTest extends ApiTestCase
             ],
             'extra' => [
                 'parameters' => [
-                    'requestedOutputFormat' => 'json',
+                    'outputFormat' => 'json',
                 ],
                 'files' => [
                     'file' => new UploadedFile(
@@ -97,7 +97,7 @@ class FileTest extends ApiTestCase
             ],
             'extra' => [
                 'parameters' => [
-                    'requestedOutputFormat' => 'json',
+                    'outputFormat' => 'json',
                 ],
                 'files' => [
                     'file' => new UploadedFile(

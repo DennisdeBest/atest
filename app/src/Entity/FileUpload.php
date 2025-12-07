@@ -48,7 +48,7 @@ class FileUpload
             'description' => 'Desired output format for the converted file.',
         ]
     )]
-    private FileOutputFormat $requestedOutputFormat;
+    private FileOutputFormat $outputFormat;
 
     #[ORM\Column(length: 255)]
     private ?string $filename = null;
@@ -80,14 +80,14 @@ class FileUpload
         return $this;
     }
 
-    public function getRequestedOutputFormat(): ?FileOutputFormat
+    public function getOutputFormat(): ?FileOutputFormat
     {
-        return $this->requestedOutputFormat;
+        return $this->outputFormat;
     }
 
-    public function setRequestedOutputFormat(FileOutputFormat $requestedOutputFormat): static
+    public function setOutputFormat(FileOutputFormat $outputFormat): static
     {
-        $this->requestedOutputFormat = $requestedOutputFormat;
+        $this->outputFormat = $outputFormat;
 
         return $this;
     }
