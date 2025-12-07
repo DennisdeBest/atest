@@ -22,15 +22,21 @@ This project uses:
 ### Workflow
 
 1. `POST /files`  
-   Uploads a source file and selects an output format. Returns a job ID.
+   Uploads a source file and selects an output format. Returns a `File` resource with a `uid`, initial `status` (`queued`), and HATEOAS-style `links` (including the status and download URLs).
 
-2. Worker processes the job asynchronously and generates a dummy converted file.
+2. A worker processes the job (synchronously in dev/tests, asynchronously in production), sleeps to simulate a long-running task, and generates a dummy converted file.
 
 3. `GET /files/{uid}`  
-   Returns job status (`queued`, `processing`, `finished`, `failed`).
+   Returns the current `File` resource:
+    - `uid` (UUID)
+    - `status` (`queued`, `processing`, `finished`, `failed`)
+    - `format` (`json` or `xml`)
+   - a `links` object that at minimum contains a `status` link. It will contain the download link when the conversion is finished.
+
 
 4. `GET /files/{uid}/download`  
-   Downloads the converted output when the job is complete.
+   Streams the converted output file (JSON or XML) when the `status` is `finished`.
+   Returns `404` if the file does not exist or the conversion is not finished.
 
 
 ## Setup
