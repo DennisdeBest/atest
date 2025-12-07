@@ -134,10 +134,10 @@ http://localhost:8087/api
 ```
 
 Uploaded files will take 120 seconds to process.  
-During that time the job status can be queried, and once complete the file is available at the download endpoint.
+During that time the job status can be queried, and once complete, the file is available at the download endpoint.
 
 ## Notes
 
 - The conversion step is simulated and does not perform real format transformation.
 - The implementation is intentionally minimal.
-- Additional ideas and next steps are documented in `TODO.md`.
+- Additional ideas and next steps are documented in [todo.md](docs/99_todo.md).
