@@ -20,4 +20,4 @@ when@test:
     framework:
         messenger:
             transports:
-                async: 'in-memory://'
+                async: 'sync://'
